@@ -20,7 +20,7 @@ namespace SmartHrSystem.Controllers
             _context = context;
         }
 
-        // 1. GET: Employees (عرض الموظفين)
+        // 1. GET: Employees 
         public async Task<IActionResult> Index()
         {
             var employees = await _context.Employees
@@ -36,7 +36,7 @@ namespace SmartHrSystem.Controllers
             var viewModel = new EmployeeFormViewModel
             {
                 Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
-                // التعديل السليم هنا باستخدام r.Title
+                
                 Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
             };
             return View(viewModel);
@@ -67,13 +67,12 @@ namespace SmartHrSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();
-            // التعديل السليم هنا باستخدام r.Title
+            model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();   
             model.Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync();
             return View(model);
         }
 
-        // 4. GET: Employees/Edit/5
+        // 4. GET: Employees/Edit
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null) return NotFound();
@@ -93,14 +92,14 @@ namespace SmartHrSystem.Controllers
                 DepartmentId = employee.DepartmentId,
                 RoleId = employee.RoleId,
                 Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
-                // التعديل السليم هنا باستخدام r.Title
+                
                 Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
             };
 
             return View(viewModel);
         }
 
-        // 5. POST: Employees/Edit/5
+        // 5. POST: Employees/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, EmployeeFormViewModel model)
@@ -127,12 +126,12 @@ namespace SmartHrSystem.Controllers
             }
 
             model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();
-            // التعديل السليم هنا باستخدام r.Title
+            
             model.Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync();
             return View(model);
         }
 
-        // 6. POST: Employees/Delete/5
+        // 6. POST: Employees/Delete
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
