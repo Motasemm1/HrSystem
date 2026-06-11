@@ -36,7 +36,6 @@ namespace SmartHrSystem.Controllers
             var viewModel = new EmployeeFormViewModel
             {
                 Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
-                
                 Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
             };
             return View(viewModel);
@@ -47,6 +46,27 @@ namespace SmartHrSystem.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(EmployeeFormViewModel model)
         {
+            
+            if (model.Salary <= 0)
+            {
+                ModelState.AddModelError("Salary", "Salary must be a positive number greater than 0.");
+            }
+
+            
+            var emailExists = await _context.Employees.AnyAsync(e => e.Email == model.Email);
+            if (emailExists)
+            {
+                ModelState.AddModelError("Email", "This email address is already registered to another employee.");
+            }
+
+           
+            var phoneExists = await _context.Employees.AnyAsync(e => e.Phone == model.Phone);
+            if (phoneExists)
+            {
+                ModelState.AddModelError("Phone", "This phone number is already registered to another employee.");
+            }
+
+           
             if (ModelState.IsValid)
             {
                 var employee = new Employee
@@ -67,7 +87,8 @@ namespace SmartHrSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();   
+            
+            model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();
             model.Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync();
             return View(model);
         }
@@ -92,7 +113,6 @@ namespace SmartHrSystem.Controllers
                 DepartmentId = employee.DepartmentId,
                 RoleId = employee.RoleId,
                 Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
-                
                 Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
             };
 
@@ -105,6 +125,26 @@ namespace SmartHrSystem.Controllers
         public async Task<IActionResult> Edit(int id, EmployeeFormViewModel model)
         {
             if (id != model.Id) return NotFound();
+
+            
+            if (model.Salary <= 0)
+            {
+                ModelState.AddModelError("Salary", "Salary must be a positive number greater than 0.");
+            }
+
+           
+            var emailExists = await _context.Employees.AnyAsync(e => e.Email == model.Email && e.Id != id);
+            if (emailExists)
+            {
+                ModelState.AddModelError("Email", "This email address is already registered to another employee.");
+            }
+
+            
+            var phoneExists = await _context.Employees.AnyAsync(e => e.Phone == model.Phone && e.Id != id);
+            if (phoneExists)
+            {
+                ModelState.AddModelError("Phone", "This phone number is already registered to another employee.");
+            }
 
             if (ModelState.IsValid)
             {
@@ -125,8 +165,8 @@ namespace SmartHrSystem.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+           
             model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();
-            
             model.Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync();
             return View(model);
         }
