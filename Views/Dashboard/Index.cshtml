@@ -1,6 +1,165 @@
-﻿@{
+﻿@model SmartHrSystem.ViewModels.DashboardViewModel
+
+@{
     ViewData["Title"] = "Dashboard";
 }
 
-<h5 class="mb-4">Dashboard</h5>
-<p class="text-muted">Welcome back. More stats coming soon.</p>
+<div class="mb-4">
+    <h5 class="fw-bold mb-0">Dashboard</h5>
+    <p class="text-muted small mb-0">Welcome back. Here's what's happening today.</p>
+</div>
+
+@* ── Stat Cards ── *@
+<div class="row g-3 mb-4">
+
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100 border-start border-primary border-4">
+            <div class="card-body">
+                <p class="text-muted small mb-1">Total employees</p>
+                <h3 class="fw-bold mb-0">@Model.TotalEmployees</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100 border-start border-success border-4">
+            <div class="card-body">
+                <p class="text-muted small mb-1">Total departments</p>
+                <h3 class="fw-bold mb-0">@Model.TotalDepartments</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100 border-start border-warning border-4">
+            <div class="card-body">
+                <p class="text-muted small mb-1">Present today</p>
+                <h3 class="fw-bold mb-0">@Model.PresentToday</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100 border-start border-danger border-4">
+            <div class="card-body">
+                <p class="text-muted small mb-1">Absent today</p>
+                <h3 class="fw-bold mb-0">@Model.AbsentToday</h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* ── Two tables side by side ── *@
+<div class="row g-3">
+
+    @* Recent Employees *@
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h6 class="fw-bold mb-0">Recently added employees</h6>
+                <a asp-controller="Employees" asp-action="Index"
+                   class="btn btn-outline-primary btn-sm">
+                    View all
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.RecentEmployees.Any())
+                {
+                    <p class="text-muted text-center py-4 mb-0">No employees added yet.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Department</th>
+                                    <th>Role</th>
+                                    <th>Hire date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var emp in Model.RecentEmployees)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@emp.FullName</td>
+                                        <td class="text-muted">@emp.Department</td>
+                                        <td class="text-muted">@emp.Role</td>
+                                        <td class="text-muted">
+                                            @emp.HireDate.ToString("MMM dd, yyyy")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* Department Summary *@
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <h6 class="fw-bold mb-0">Departments overview</h6>
+                <a asp-controller="Departments" asp-action="Index"
+                   class="btn btn-outline-primary btn-sm">
+                    View all
+                </a>
+            </div>
+            <div class="card-body p-0">
+                @if (!Model.DepartmentSummaries.Any())
+                {
+                    <p class="text-muted text-center py-4 mb-0">No departments added yet.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Department</th>
+                                    <th class="text-center">Employees</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var dept in Model.DepartmentSummaries)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="fw-semibold">@dept.Name</span>
+                                            @if (!string.IsNullOrEmpty(dept.Description))
+                                            {
+                                                <br />
+                                                <small class="text-muted">@dept.Description</small>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary rounded-pill">
+                                                @dept.EmployeeCount
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md">
+        <div class="card border-0 shadow-sm h-100 border-start border-info border-4">
+            <div class="card-body">
+                <p class="text-muted small mb-1">Total monthly salary</p>
+                <h3 class="fw-bold mb-0">
+                    @Model.TotalMonthlySalary.ToString("C0")
+                </h3>
+            </div>
+        </div>
+    </div>
+
+</div>
