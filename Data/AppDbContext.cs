@@ -58,6 +58,13 @@ namespace SmartHrSystem.Data
             builder.Entity<AttendanceRecord>()
                 .HasIndex(a => new { a.EmployeeId, a.Date })
                 .IsUnique();
+
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.Employee)
+                .WithOne()
+                .HasForeignKey<ApplicationUser>(u => u.EmployeeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
         }
     }
 }

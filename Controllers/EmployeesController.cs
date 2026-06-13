@@ -1,29 +1,35 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using SmartHrSystem.Data;
 using SmartHrSystem.Models;
 using SmartHrSystem.ViewModels;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SmartHrSystem.Controllers
 {
+    [Authorize(Roles = "HR")]
     public class EmployeesController : Controller
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContext _db;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public EmployeesController(AppDbContext context)
+
+        public EmployeesController(AppDbContext context, UserManager<ApplicationUser> userManager)
         {
-            _context = context;
+            _db = context;
+            _userManager = userManager;
         }
 
         // 1. GET: Employees 
         public async Task<IActionResult> Index()
         {
-            var employees = await _context.Employees
+            var employees = await _db.Employees
                 .Include(e => e.Department)
                 .Include(e => e.Role)
                 .ToListAsync();
@@ -35,154 +41,235 @@ namespace SmartHrSystem.Controllers
         {
             var viewModel = new EmployeeFormViewModel
             {
-                Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
-                Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
+                Departments = await _db.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
+                Roles = await _db.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
             };
             return View(viewModel);
         }
 
-        // 3. POST: Employees/Create
+        // POST: /Employees/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(EmployeeFormViewModel model)
         {
-            
-            if (model.Salary <= 0)
+            // password required on create
+            if (string.IsNullOrWhiteSpace(model.Password))
+                ModelState.AddModelError(nameof(model.Password), "Password is required.");
+
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError("Salary", "Salary must be a positive number greater than 0.");
+                await PopulateDropdownsAsync(model);
+                return View(model);
             }
 
-            
-            var emailExists = await _context.Employees.AnyAsync(e => e.Email == model.Email);
+            // check duplicate employee email
+            bool emailExists = await _db.Employees
+                .AnyAsync(e => e.Email.ToLower() == model.Email.ToLower());
+
             if (emailExists)
             {
-                ModelState.AddModelError("Email", "This email address is already registered to another employee.");
+                ModelState.AddModelError(nameof(model.Email), "An employee with this email already exists.");
+                await PopulateDropdownsAsync(model);
+                return View(model);
             }
 
-           
-            var phoneExists = await _context.Employees.AnyAsync(e => e.Phone == model.Phone);
-            if (phoneExists)
+            // check if email already used in Identity
+            bool identityEmailExists = await _userManager.FindByEmailAsync(model.Email) != null;
+            if (identityEmailExists)
             {
-                ModelState.AddModelError("Phone", "This phone number is already registered to another employee.");
+                ModelState.AddModelError(nameof(model.Email), "This email is already linked to a system account.");
+                await PopulateDropdownsAsync(model);
+                return View(model);
             }
 
-           
-            if (ModelState.IsValid)
+            // 1. create Employee record first
+            var employee = new Employee
             {
-                var employee = new Employee
-                {
-                    FirstName = model.FirstName,
-                    LastName = model.LastName,
-                    Email = model.Email,
-                    Phone = model.Phone,
-                    HireDate = model.HireDate,
-                    Salary = model.Salary,
-                    DepartmentId = model.DepartmentId,
-                    RoleId = model.RoleId,
-                    CreatedAt = DateTime.UtcNow
-                };
+                FirstName = model.FirstName.Trim(),
+                LastName = model.LastName.Trim(),
+                Email = model.Email.Trim(),
+                Phone = model.Phone?.Trim(),
+                HireDate = model.HireDate,
+                DepartmentId = model.DepartmentId,
+                RoleId = model.RoleId,
+                Salary = model.Salary,
+                CreatedAt = DateTime.UtcNow
+            };
 
-                _context.Add(employee);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+            _db.Employees.Add(employee);
+            await _db.SaveChangesAsync(); // save to get the Id
+
+            // 2. create Identity account linked to the employee
+            var user = new ApplicationUser
+            {
+                UserName = model.Email.Trim(),
+                Email = model.Email.Trim(),
+                EmailConfirmed = true,
+                EmployeeId = employee.Id
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password!);
+
+            if (!result.Succeeded)
+            {
+                // identity failed — rollback the employee record
+                _db.Employees.Remove(employee);
+                await _db.SaveChangesAsync();
+
+                foreach (var error in result.Errors)
+                    ModelState.AddModelError(string.Empty, error.Description);
+
+                await PopulateDropdownsAsync(model);
+                return View(model);
             }
 
-            
-            model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();
-            model.Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync();
-            return View(model);
+            await _userManager.AddToRoleAsync(user, "Employee");
+
+            TempData["Success"] = $"{employee.FirstName} {employee.LastName} added successfully with a portal account.";
+            return RedirectToAction(nameof(Index));
         }
 
-        // 4. GET: Employees/Edit
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null) return NotFound();
 
-            var employee = await _context.Employees.FindAsync(id);
+        // GET: /Employees/Edit/5
+        public async Task<IActionResult> Edit(int id)
+        {
+            var employee = await _db.Employees.FindAsync(id);
             if (employee == null) return NotFound();
 
-            var viewModel = new EmployeeFormViewModel
+            var model = new EmployeeFormViewModel
             {
                 Id = employee.Id,
                 FirstName = employee.FirstName,
                 LastName = employee.LastName,
                 Email = employee.Email,
-                Phone = employee.Phone ?? string.Empty,
+                Phone = employee.Phone,
                 HireDate = employee.HireDate,
-                Salary = employee.Salary,
                 DepartmentId = employee.DepartmentId,
                 RoleId = employee.RoleId,
-                Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync(),
-                Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync()
+                Salary = employee.Salary
             };
 
-            return View(viewModel);
+            await PopulateDropdownsAsync(model);
+            return View(model);
         }
 
-        // 5. POST: Employees/Edit
+        // POST: /Employees/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, EmployeeFormViewModel model)
         {
-            if (id != model.Id) return NotFound();
+            // remove password validation on edit — it's optional
+            ModelState.Remove(nameof(model.Password));
+            ModelState.Remove(nameof(model.ConfirmPassword));
 
-            
-            if (model.Salary <= 0)
+            if (!ModelState.IsValid)
             {
-                ModelState.AddModelError("Salary", "Salary must be a positive number greater than 0.");
+                await PopulateDropdownsAsync(model);
+                return View(model);
             }
 
-           
-            var emailExists = await _context.Employees.AnyAsync(e => e.Email == model.Email && e.Id != id);
+            var employee = await _db.Employees.FindAsync(id);
+            if (employee == null) return NotFound();
+
+            // check duplicate email excluding current employee
+            bool emailExists = await _db.Employees
+                .AnyAsync(e => e.Email.ToLower() == model.Email.ToLower() && e.Id != id);
+
             if (emailExists)
             {
-                ModelState.AddModelError("Email", "This email address is already registered to another employee.");
+                ModelState.AddModelError(nameof(model.Email), "This email is already used by another employee.");
+                await PopulateDropdownsAsync(model);
+                return View(model);
             }
 
-            
-            var phoneExists = await _context.Employees.AnyAsync(e => e.Phone == model.Phone && e.Id != id);
-            if (phoneExists)
+            // update employee record
+            employee.FirstName = model.FirstName.Trim();
+            employee.LastName = model.LastName.Trim();
+            employee.Email = model.Email.Trim();
+            employee.Phone = model.Phone?.Trim();
+            employee.HireDate = model.HireDate;
+            employee.DepartmentId = model.DepartmentId;
+            employee.RoleId = model.RoleId;
+            employee.Salary = model.Salary;
+
+            await _db.SaveChangesAsync();
+
+            // update Identity account email if it changed
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.EmployeeId == id);
+
+            if (user != null)
             {
-                ModelState.AddModelError("Phone", "This phone number is already registered to another employee.");
+                user.Email = model.Email.Trim();
+                user.UserName = model.Email.Trim();
+                await _userManager.UpdateAsync(user);
+
+                // reset password if HR provided a new one
+                if (!string.IsNullOrWhiteSpace(model.NewPassword))
+                {
+                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+                    if (!result.Succeeded)
+                    {
+                        foreach (var error in result.Errors)
+                            ModelState.AddModelError(string.Empty, error.Description);
+
+                        await PopulateDropdownsAsync(model);
+                        return View(model);
+                    }
+                }
             }
 
-            if (ModelState.IsValid)
-            {
-                var employee = await _context.Employees.FindAsync(id);
-                if (employee == null) return NotFound();
-
-                employee.FirstName = model.FirstName;
-                employee.LastName = model.LastName;
-                employee.Email = model.Email;
-                employee.Phone = model.Phone;
-                employee.HireDate = model.HireDate;
-                employee.Salary = model.Salary;
-                employee.DepartmentId = model.DepartmentId;
-                employee.RoleId = model.RoleId;
-
-                _context.Update(employee);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-
-           
-            model.Departments = await _context.Departments.Select(d => new SelectListItem { Value = d.Id.ToString(), Text = d.Name }).ToListAsync();
-            model.Roles = await _context.Roles.Select(r => new SelectListItem { Value = r.Id.ToString(), Text = r.Title }).ToListAsync();
-            return View(model);
+            TempData["Success"] = $"{employee.FirstName} {employee.LastName} updated successfully.";
+            return RedirectToAction(nameof(Index));
         }
 
-        // 6. POST: Employees/Delete
-        [HttpPost, ActionName("Delete")]
+        // POST: /Employees/Delete/5
+        [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var employee = await _context.Employees.FindAsync(id);
-            if (employee != null)
-            {
-                _context.Employees.Remove(employee);
-                await _context.SaveChangesAsync();
-            }
+            var employee = await _db.Employees
+                .Include(e => e.AttendanceRecords)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (employee == null) return NotFound();
+
+            // delete linked Identity account first
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.EmployeeId == id);
+
+            if (user != null)
+                await _userManager.DeleteAsync(user);
+
+            _db.Employees.Remove(employee);
+            await _db.SaveChangesAsync();
+
+            TempData["Success"] = $"{employee.FirstName} {employee.LastName} deleted successfully.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // ── Helpers ──────────────────────────────────────────────────────────────
+        private async Task PopulateDropdownsAsync(EmployeeFormViewModel model)
+        {
+            model.Departments = await _db.Departments
+                .OrderBy(d => d.Name)
+                .Select(d => new SelectListItem
+                {
+                    Value = d.Id.ToString(),
+                    Text = d.Name
+                })
+                .ToListAsync();
+
+            model.Roles = await _db.Roles
+                .OrderBy(r => r.Title)
+                .Select(r => new SelectListItem
+                {
+                    Value = r.Id.ToString(),
+                    Text = r.Title
+                })
+                .ToListAsync();
         }
     }
 }

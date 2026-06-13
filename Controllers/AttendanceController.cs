@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartHrSystem.Data;
@@ -6,6 +7,7 @@ using SmartHrSystem.ViewModels;
 
 namespace SmartHrSystem.Controllers
 {
+    [Authorize(Roles = "HR")]
     public class AttendanceController : Controller
     {
         private static readonly string[] AllowedStatuses = { "Office", "Home" };

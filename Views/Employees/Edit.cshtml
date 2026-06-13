@@ -4,83 +4,148 @@
     ViewData["Title"] = "Edit Employee";
 }
 
-<div class="container mt-4" style="max-width: 700px;">
-    <div class="card shadow-sm border-0">
-        <div class="card-header bg-white border-0 pt-4">
-            <h3 class="text-dark font-weight-bold m-0">Edit Employee Details</h3>
-        </div>
-        <div class="card-body">
-            <form asp-action="Edit" method="post">
-                <input type="hidden" asp-for="Id" />
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+<div class="mb-4">
+    <a asp-action="Index" class="text-decoration-none text-muted small">
+        &larr; Employees
+    </a>
+</div>
 
-                <div class="row">
-                    <div class="col-md-6 form-group mb-3">
-                        <label class="form-label text-secondary mb-1">First Name</label>
-                        <input asp-for="FirstName" class="form-control form-control-lg" />
-                        <span asp-validation-for="FirstName" class="text-danger small"></span>
-                    </div>
-                    <div class="col-md-6 form-group mb-3">
-                        <label class="form-label text-secondary mb-1">Last Name</label>
-                        <input asp-for="LastName" class="form-control form-control-lg" />
-                        <span asp-validation-for="LastName" class="text-danger small"></span>
-                    </div>
-                </div>
+<div class="row">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1">Edit employee</h5>
+                <p class="text-muted small mb-4">
+                    Changes here update both the employee record and their portal account.
+                </p>
 
-                <div class="row">
-                    <div class="col-md-6 form-group mb-3">
-                        <label class="form-label text-secondary mb-1">Email Address</label>
-                        <input asp-for="Email" class="form-control form-control-lg" />
-                        <span asp-validation-for="Email" class="text-danger small"></span>
-                    </div>
-                    <div class="col-md-6 form-group mb-3">
-                        <label class="form-label text-secondary mb-1">Phone Number</label>
-                        <input asp-for="Phone" class="form-control form-control-lg" />
-                        <span asp-validation-for="Phone" class="text-danger small"></span>
-                    </div>
-                </div>
+                <form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+                    @Html.AntiForgeryToken()
 
-                <div class="row">
-                    <div class="col-md-6 form-group mb-3">
-                        <label class="form-label text-secondary mb-1">Hire Date</label>
-                        <input asp-for="HireDate" class="form-control form-control-lg" />
-                        <span asp-validation-for="HireDate" class="text-danger small"></span>
+                    @* ── Personal Info ── *@
+                    <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">
+                        Personal information
+                    </h6>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="FirstName" class="form-label">
+                                First name <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="FirstName" class="form-control" />
+                            <span asp-validation-for="FirstName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="LastName" class="form-label">
+                                Last name <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="LastName" class="form-control" />
+                            <span asp-validation-for="LastName" class="text-danger small"></span>
+                        </div>
                     </div>
-                    <div class="col-md-6 form-group mb-3">
-                        <label class="form-label text-secondary mb-1">Salary</label>
-                        <input asp-for="Salary" class="form-control form-control-lg" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label">
+                                Email <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Email" class="form-control" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Phone" class="form-label">Phone</label>
+                            <input asp-for="Phone" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label asp-for="HireDate" class="form-label">
+                                Hire date <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="HireDate" type="date" class="form-control" />
+                            <span asp-validation-for="HireDate" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="DepartmentId" class="form-label">
+                                Department <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="DepartmentId"
+                                    asp-items="Model.Departments"
+                                    class="form-select">
+                                <option value="">Select department</option>
+                            </select>
+                            <span asp-validation-for="DepartmentId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="RoleId" class="form-label">
+                                Role <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="RoleId"
+                                    asp-items="Model.Roles"
+                                    class="form-select">
+                                <option value="">Select role</option>
+                            </select>
+                            <span asp-validation-for="RoleId" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Salary" class="form-label">
+                            Salary <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input asp-for="Salary" class="form-control" />
+                            <span class="input-group-text">EGP</span>
+                        </div>
                         <span asp-validation-for="Salary" class="text-danger small"></span>
                     </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-6 form-group mb-4">
-                        <label class="form-label text-secondary mb-1">Department</label>
-                        <select asp-for="DepartmentId" class="form-control form-control-lg" asp-items="Model.Departments">
-                            <option value="">-- Select Department --</option>
-                        </select>
-                        <span asp-validation-for="DepartmentId" class="text-danger small"></span>
-                    </div>
-                    <div class="col-md-6 form-group mb-4">
-                        <label class="form-label text-secondary mb-1">Role / Position</label>
-                        <select asp-for="RoleId" class="form-control form-control-lg" asp-items="Model.Roles">
-                            <option value="">-- Select Role --</option>
-                        </select>
-                        <span asp-validation-for="RoleId" class="text-danger small"></span>
-                    </div>
-                </div>
+                    @* ── Reset Password (optional) ── *@
+                    <h6 class="fw-semibold text-muted mb-3 border-bottom pb-2">
+                        Reset portal password
+                        <span class="text-muted fw-normal small">(leave empty to keep current)</span>
+                    </h6>
 
-                <div class="d-flex justify-content-end border-top pt-3">
-                    <a asp-action="Index" class="btn btn-light px-4 mr-2">Cancel</a>
-                    <button type="submit" class="btn btn-info text-white px-5">Update Details</button>
-                </div>
-            </form>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label asp-for="NewPassword" class="form-label">New password</label>
+                            <input asp-for="NewPassword"
+                                   type="password"
+                                   class="form-control"
+                                   placeholder="Leave empty to keep current" />
+                            <span asp-validation-for="NewPassword" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ConfirmNewPassword" class="form-label">
+                                Confirm new password
+                            </label>
+                            <input asp-for="ConfirmNewPassword"
+                                   type="password"
+                                   class="form-control"
+                                   placeholder="Repeat new password" />
+                            <span asp-validation-for="ConfirmNewPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    @* general identity errors *@
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        foreach (var error in ViewData.ModelState[""]?.Errors ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.ModelBinding.ModelError>())
+                        {
+                            <div class="alert alert-danger py-2">@error.ErrorMessage</div>
+                        }
+                    }
+
+                    <hr />
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save changes</button>
+                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                    </div>
+
+                </form>
+            </div>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
-}
