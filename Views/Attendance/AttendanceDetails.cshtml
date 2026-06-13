@@ -1,0 +1,225 @@
+@model SmartHrSystem.ViewModels.AttendanceDetailsViewModel
+
+@{
+    ViewData["Title"] = "Attendance Details";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="mb-1 fw-bold">Attendance Details</h5>
+        <p class="text-muted small mb-0">@Model.EmployeeName</p>
+    </div>
+    <a asp-action="Index" class="btn btn-light btn-sm">Back to Attendance</a>
+</div>
+@* @if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+} *@
+
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Employee</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted">Name</dt>
+                    <dd class="col-sm-8 fw-semibold">@Model.EmployeeName</dd>
+
+                    <dt class="col-sm-4 text-muted">Department</dt>
+                    <dd class="col-sm-8">@Model.DepartmentName</dd>
+
+                    <dt class="col-sm-4 text-muted">Role</dt>
+                    <dd class="col-sm-8">@Model.RoleTitle</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Last Attendance Records</h6>
+            </div>
+            <div class="table-responsive">
+                @* Add this delete form helper above the table *@
+
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white">
+                        <h6 class="mb-0 fw-bold">Last Attendance Records</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>In</th>
+                                    <th>Out</th>
+                                    <th class="text-end">Hours</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!Model.AttendanceHistory.Any())
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">No records yet.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var record in Model.AttendanceHistory)
+                                    {
+                                        var hours = record.CheckOut.HasValue && record.CheckOut.Value > record.CheckIn
+                                        ? Math.Round((record.CheckOut.Value - record.CheckIn).TotalHours, 2)
+                                        : (double?)null;
+
+                                        <tr>
+                                            <td>@record.Date.ToString("yyyy-MM-dd")</td>
+                                            <td>@record.Status</td>
+                                            <td>@record.CheckIn.ToString("HH:mm")</td>
+                                            <td>@(record.CheckOut.HasValue? record.CheckOut.Value.ToString("HH:mm") : "-")</td>
+                                            <td class="text-end">@(hours.HasValue ? $"{hours.Value:N2}" : "-")</td>
+                                            <td class="text-end">
+                                                <button type="button"
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#deleteModal"
+                                                        data-record-id="@record.Id"
+                                                        data-record-date="@record.Date.ToString("yyyy-MM-dd")">
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                 
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Record Attendance</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="AttendanceDetails" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <input asp-for="AttendanceRecordId" type="hidden" />
+                    <input asp-for="EmployeeId" type="hidden" />
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Date" class="form-label text-secondary"></label>
+                            <input asp-for="Date" class="form-control" />
+                            <span asp-validation-for="Date" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Status" class="form-label text-secondary"></label>
+                            <select asp-for="Status" class="form-select">
+                                <option value="Office">Working from office</option>
+                                <option value="Home">Working from home</option>
+                            </select>
+                            <span asp-validation-for="Status" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CheckIn" class="form-label text-secondary"></label>
+                            <input asp-for="CheckIn" class="form-control" />
+                            <span asp-validation-for="CheckIn" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="CheckOut" class="form-label text-secondary"></label>
+                            <input asp-for="CheckOut" class="form-control" />
+                            <span asp-validation-for="CheckOut" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label text-secondary"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="alert alert-info d-flex justify-content-between align-items-center">
+                        <span>Total working hours</span>
+                        <strong id="totalHours">@(Model.TotalHours.HasValue ? $"{Model.TotalHours.Value:N2} hours" : "Not calculated")</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-end border-top pt-3">
+                        <button type="submit" class="btn btn-primary px-4">Save Attendance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold" id="deleteModalLabel">Delete Attendance Record</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-muted">
+                Are you sure you want to delete the record for
+                <strong class="text-dark" id="modalRecordDate"></strong>?
+                This action cannot be undone.
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" asp-action="DeleteAttendanceRecord" asp-controller="Attendance" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="modalRecordId" name="recordId" />
+                    <input type="hidden" name="employeeId" value="@Model.EmployeeId" />
+                    <button type="submit" class="btn btn-danger px-4">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        const checkInInput = document.getElementById("CheckIn");
+        const checkOutInput = document.getElementById("CheckOut");
+        const totalHours = document.getElementById("totalHours");
+
+        function updateTotalHours() {
+            if (!checkInInput.value || !checkOutInput.value) {
+                totalHours.textContent = "Not calculated";
+                return;
+            }
+
+            const start = new Date(`2000-01-01T${checkInInput.value}`);
+            const end = new Date(`2000-01-01T${checkOutInput.value}`);
+            const diff = (end - start) / 36e5;
+
+            totalHours.textContent = diff > 0 ? `${diff.toFixed(2)} hours` : "Invalid leave time";
+        }
+
+        checkInInput.addEventListener("input", updateTotalHours);
+        checkOutInput.addEventListener("input", updateTotalHours);
+
+          const deleteModal = document.getElementById("deleteModal");
+        deleteModal.addEventListener("show.bs.modal", function (event) {
+            const button = event.relatedTarget;
+            document.getElementById("modalRecordId").value = button.getAttribute("data-record-id");
+            document.getElementById("modalRecordDate").textContent = button.getAttribute("data-record-date");
+        });
+    </script>
+}

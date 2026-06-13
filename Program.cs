@@ -21,7 +21,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
-    options.AccessDeniedPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
 });
 
 // Add services to the container.
@@ -50,7 +50,7 @@ app.MapControllerRoute(
 
 using (var scope = app.Services.CreateScope())
 {
-    await DbSeeder.SeedAdminUserAsync(scope.ServiceProvider);
+    await DbSeeder.SeedAsync(scope.ServiceProvider);
 }
 
 app.Run();

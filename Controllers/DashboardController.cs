@@ -7,7 +7,7 @@ using SmartHrSystem.ViewModels;
 namespace SmartHrSystem.Controllers
 {
 
-    [Authorize]
+    [Authorize(Roles = "HR")]
     public class DashboardController : Controller
     {
         private readonly AppDbContext _db;

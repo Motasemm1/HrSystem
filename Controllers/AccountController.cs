@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SmartHrSystem.Models;
 using SmartHrSystem.ViewModels;
 
 namespace SmartHrSystem.Controllers
 {
+    
     public class AccountController : Controller
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -42,7 +44,15 @@ namespace SmartHrSystem.Controllers
                 lockoutOnFailure: false);
 
             if (result.Succeeded)
-                return RedirectToAction("Index", "Dashboard");
+            {
+                var user = await _userManager.FindByEmailAsync(model.Email);
+
+                if (await _userManager.IsInRoleAsync(user!, "HR"))
+                    return RedirectToAction("Index", "Dashboard");
+
+                if (await _userManager.IsInRoleAsync(user!, "Employee"))
+                    return RedirectToAction("Index", "MyProfile");
+            }
 
             ModelState.AddModelError(string.Empty, "Invalid email or password.");
             return View(model);
@@ -54,6 +64,12 @@ namespace SmartHrSystem.Controllers
         {
             await _signInManager.SignOutAsync();
             return RedirectToAction("Login");
+        }
+
+        [HttpGet]
+        public IActionResult AccessDenied()
+        {
+            return View();
         }
     }
 }
